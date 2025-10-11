@@ -1,20 +1,18 @@
-const express = require('express');
-const cors = require('cors');
-const dotenv = require('dotenv');
-
-dotenv.config();
-
-const analyzerRoutes = require('./routes/analyzerRoutes');
+// backend/server.js
+const express = require("express");
+const cors = require("cors");
+require("dotenv").config();
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-app.get('/', (req, res) => {
-  res.send('Server is running...');
-});
+// use your route file
+const analyzerRoutes = require("./routes/analyzerRoutes");
+app.use("/api", analyzerRoutes); // 👈 Prefix all routes with /api
 
-app.use('/api/analyze', analyzerRoutes);
+// simple test endpoint (optional)
+app.get("/", (req, res) => res.send("✅ Backend running"));
 
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {

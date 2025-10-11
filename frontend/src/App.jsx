@@ -1,17 +1,19 @@
 import React, { useState } from "react";
 import RepoInput from "./components/RepoInput";
 import AnalysisResult from "./components/AnalysisResult";
+import Spinner from "./components/Spinner";
+import "./App.css";
 
 function App() {
-  const [result, setResult] = useState(null);
+  const [analysisData, setAnalysisData] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [spinnerText, setSpinnerText] = useState("🔍 Starting analysis...");
 
-  const handleAnalyze = async (repoUrl) => {
+  const handleAnalysis = async (repoUrl) => {
     try {
+      setAnalysisData(null);
       setLoading(true);
-      setError("");
-      setResult(null);
+      setSpinnerText("🧩 Scanning repository files...");
 
       const res = await fetch("http://localhost:4000/api/analyze", {
         method: "POST",
@@ -19,25 +21,36 @@ function App() {
         body: JSON.stringify({ repoUrl }),
       });
 
-      const data = await res.json();
-      setLoading(false);
+      setSpinnerText("📦 Analyzing dependencies and vulnerabilities...");
 
-      if (data.error) setError(data.error);
-      else setResult(data.analysis || data);
+      const data = await res.json();
+
+      if (data.success) {
+        setSpinnerText("🧠 Generating AI risk explanation...");
+        // short delay to make transition smoother
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        setAnalysisData(data);
+      } else {
+        alert("Analysis failed or incomplete. Please check the backend logs.");
+      }
     } catch (err) {
+      console.error("Error fetching analysis:", err);
+      alert("⚠️ Error occurred while analyzing repository.");
+    } finally {
       setLoading(false);
-      setError("Something went wrong.");
-      console.error(err);
     }
   };
 
   return (
-    <div style={{ padding: "2rem", fontFamily: "Arial" }}>
-      <h1>MCP Agent — Dependency Analyzer</h1>
-      <RepoInput onAnalyze={handleAnalyze} />
-      {loading && <p>Analyzing — please wait…</p>}
-      {error && <p style={{ color: "red" }}>{error}</p>}
-      <AnalysisResult result={result} />
+    <div className="App">
+      <h1>🔍 GitHub Risk Analyzer</h1>
+      <RepoInput onAnalyze={handleAnalysis} />
+
+      {loading && <Spinner text={spinnerText} />}
+
+      {!loading && analysisData && analysisData.success && (
+        <AnalysisResult data={analysisData} />
+      )}
     </div>
   );
 }

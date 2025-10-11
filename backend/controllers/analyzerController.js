@@ -1,5 +1,9 @@
-const axios = require('axios');
-const { GoogleGenerativeAI } = require('@google/generative-ai');
+// backend/controllers/analyzerController.js
+const axios = require("axios");
+const { getLLMExplanation } = require("../utils/llmExplain");
+
+// In-memory cache for scan results (to use when fetching explanations)
+const scanCache = new Map();
 
 exports.analyzePackage = async (req, res) => {
   try {
@@ -7,106 +11,61 @@ exports.analyzePackage = async (req, res) => {
     if (!repoUrl)
       return res.status(400).json({ error: 'Expected "repoUrl" in request body.' });
 
-    // Extract owner and repo
-    const [owner, repo] = repoUrl.replace('https://github.com/', '').split('/');
+    // Step 1️⃣ – GitHub scan
+    const scan = await axios.post("http://localhost:8000/tool/github_scan", { repoUrl });
+    const { deps, findings } = scan.data.output;
 
-    // Fetch repo tree recursively
-    const treeUrl = `https://api.github.com/repos/${owner}/${repo}/git/trees/main?recursive=1`;
-    const treeResponse = await axios.get(treeUrl, {
-      headers: { 'User-Agent': 'MCP-AI-Agent' },
+    // Step 2️⃣ – Risk scoring
+    const score = await axios.post("http://localhost:8000/tool/risk_score", { deps });
+    const { scores, overall } = score.data.output;
+
+    // Step 3️⃣ – Governance actions
+    const rec = await axios.post("http://localhost:8000/tool/recommend_actions", {
+      overall,
+      findings,
     });
+    const { actions } = rec.data.output;
 
-    const tree = treeResponse.data.tree;
+    // Store analysis data for LLM use
+    scanCache.set(repoUrl, { scores, overall });
 
-    // Dependency file patterns (lowercase for comparison)
-    const dependencyFiles = [
-      'package.json',
-      'requirements.txt',
-      'pyproject.toml',
-      'environment.yml',
-      'composer.json',
-      'pom.xml',
-      'build.gradle',
-      'go.mod',
-      'cargo.toml',
-      'gemfile',
-      'mix.exs'
-    ];
-
-    // Find dependency files (case-insensitive)
-    const foundFiles = tree.filter(item =>
-      dependencyFiles.some(dep => item.path.toLowerCase().endsWith(dep))
-    );
-
-    if (foundFiles.length === 0) {
-      return res.status(404).json({
-        error: 'No recognized dependency file found in this repository.',
-      });
-    }
-
-    // Fetch contents from actual file paths (respecting case)
-    const fileContents = [];
-    for (const file of foundFiles) {
-      const filePath = file.path; // preserve original case
-      const rawUrl = `https://raw.githubusercontent.com/${owner}/${repo}/main/${filePath}`;
-      try {
-        const fileResponse = await axios.get(rawUrl);
-        fileContents.push({ file: filePath, content: fileResponse.data });
-      } catch (err) {
-        console.warn(`❗ Could not fetch ${filePath}: ${err.message}`);
-      }
-    }
-
-    if (fileContents.length === 0) {
-      return res.status(404).json({
-        error: 'Could not fetch any dependency file contents.',
-      });
-    }
-
-    // Build analysis prompt
-    let filesForPrompt = fileContents
-      .map(f => `File: ${f.file}\n\n${f.content}`)
-      .join('\n\n---\n\n');
-
-    const prompt = `
-Analyze the following dependency files (JavaScript, Python, PHP, Java, etc.)
-and return a concise JSON array.
-
-For each risky or noteworthy dependency, include:
-1. "package": name of dependency
-2. "risk": one-line summary of vulnerability or issue
-3. "alternatives": safer or modern options
-
-Return ONLY valid JSON.
-
-Dependency files:
-${filesForPrompt}
-`;
-
-    // Send to Gemini
-    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
-    const result = await model.generateContent(prompt);
-    const responseText = await result.response.text();
-
-    let parsed;
-    try {
-      parsed = JSON.parse(responseText);
-    } catch {
-      const match = responseText.match(/\[.*\]/s);
-      parsed = match ? JSON.parse(match[0]) : responseText;
-    }
-
+    // Return main response immediately
     res.json({
       success: true,
-      filesAnalyzed: foundFiles.map(f => f.path),
-      analysis: parsed,
+      repoUrl,
+      dependencies: deps,
+      riskAnalysis: scores,
+      overallRisk: overall,
+      recommendedActions: actions,
+      llmExplanation: null, // placeholder (AI loads async)
+    });
+
+    // Background LLM generation (async)
+    getLLMExplanation(repoUrl, scores, overall).then((text) => {
+      scanCache.set(repoUrl, { ...scanCache.get(repoUrl), shortAI: text });
+      console.log(`🧠 Cached LLM summary for ${repoUrl}`);
     });
   } catch (err) {
     console.error(err);
-    res.status(500).json({
-      error: 'Failed to analyze repo',
-      details: err.message,
-    });
+    res.status(500).json({ error: err.message });
   }
 };
+
+// 🔁 Endpoint to fetch or refresh AI explanation
+exports.getAIExplanation = async (req, res) => {
+  try {
+    const { repoUrl, detail } = req.query;
+    if (!repoUrl) return res.status(400).json({ error: "Missing repoUrl" });
+
+    const analysis = scanCache.get(repoUrl);
+    if (!analysis) return res.status(404).json({ error: "No previous scan found" });
+
+    const text = await getLLMExplanation(repoUrl, analysis.scores, analysis.overall, detail || "short");
+    res.json({ explanation: text });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+};
+// expose cached scans for streaming
+exports.getCachedScan = () => scanCache;

@@ -1,0 +1,26 @@
+{
+  "name": "mcp-secure-github-agent",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "start": "node dist/server.js",
+    "build": "tsc"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.18.2",
+    "axios": "^1.12.2",
+    "dotenv": "^16.6.1",
+    "express": "^5.1.0",
+    "octokit": "^4.1.4",
+    "p-limit": "^7.1.1",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.3",
+    "@types/node": "^22.18.8",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3"
+  }
+}
