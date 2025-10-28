@@ -115,8 +115,23 @@ app.post("/tool/risk_score", async (req, res) => {
             })
             .filter(Boolean)
         );
+      } else if (f.path.endsWith("Pipfile")) {
+        const lines = f.content.split(/\r?\n/);
+        let inPackages = false;   
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (trimmed.startsWith("[packages]")) {
+            inPackages = true;
+            continue;
+          } else if (trimmed.startsWith("[")) {
+            inPackages = false;
+          }
+          if (inPackages && trimmed && !trimmed.startsWith("#")) {
+            const pkg = trimmed.split("=")[0]?.trim();
+            if (pkg) pipPkgs.push(pkg);
+          }
+        }
       }
-      // TODO: parse pyproject.toml/Pipfile/poetry.lock/pom.xml/gradle if needed
     }
 
     // --- de-duplicate & sort (stable output)
