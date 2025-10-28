@@ -280,7 +280,7 @@ const AnalysisResult = ({ data }) => {
                 }}
               />
             ) : (
-              <p>⏳ Awaiting AI explanation...</p>
+              <p>⏳Click any of the above buttons for AI- Explanation</p>
             )}
           </div>
         </div>
