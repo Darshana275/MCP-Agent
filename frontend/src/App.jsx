@@ -43,7 +43,7 @@ function App() {
 
   return (
     <div className="App">
-      <h1>🔍 GitHub Risk Analyzer</h1>
+      <h1 style={{ textAlign: 'center', marginTop: '20px' }}>🔍 GitHub Risk Analyzer</h1>
       <RepoInput onAnalyze={handleAnalysis} />
 
       {loading && <Spinner text={spinnerText} />}

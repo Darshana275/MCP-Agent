@@ -1,0 +1,81 @@
+/* ---- Page margins & centering like the Analysis page ---- */
+.repo-input-page {
+  padding-left: 6cm;
+  padding-right: 6cm;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.repo-input-form {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  max-width: 800px;
+  background: #fff;
+  padding: 30px 40px;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+/* Responsive fallback */
+@media (max-width: 900px) {
+  .repo-input-page {
+    padding-left: 1.25rem;
+    padding-right: 1.25rem;
+  }
+
+  .repo-input-form {
+    flex-direction: column;
+    gap: 12px;
+    padding: 20px;
+  }
+
+  .repo-input-field {
+    width: 100% !important;
+  }
+}
+
+/* ---- Input Field ---- */
+.repo-input-field {
+  width: 60%;
+  padding: 10px 12px;
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  font-size: 1rem;
+  transition: border-color 0.2s ease;
+}
+
+.repo-input-field:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 3px rgba(0,123,255,0.3);
+}
+
+/* ---- Analyze Button ---- */
+.repo-input-btn {
+  padding: 10px 16px;
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  background: #f7f7f7;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 500;
+  transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.02s ease;
+}
+
+.repo-input-btn:hover {
+  background: #efefef;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+
+.repo-input-btn:active {
+  transform: translateY(1px);
+}
+
+.repo-input-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

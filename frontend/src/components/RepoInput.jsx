@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import './RepoInput.css';  // import the CSS file
 
 function RepoInput({ onAnalyze }) {
   const [repoUrl, setRepoUrl] = useState('');
@@ -9,17 +10,21 @@ function RepoInput({ onAnalyze }) {
   };
 
   return (
-    <form onSubmit={handleSubmit}>
-      <input
-        type="text"
-        value={repoUrl}
-        onChange={(e) => setRepoUrl(e.target.value)}
-        placeholder="Enter GitHub repo URL"
-        style={{ width: '60%', padding: '8px', marginRight: '10px' }}
-      />
-      <button type="submit">Analyze</button>
-    </form>
+    <div className="repo-input-page">
+      <form className="repo-input-form" onSubmit={handleSubmit}>
+        <input
+          type="text"
+          value={repoUrl}
+          onChange={(e) => setRepoUrl(e.target.value)}
+          placeholder="Enter GitHub repo URL"
+          className="repo-input-field"
+        />
+        <button type="submit" className="repo-input-btn">
+          Analyze
+        </button>
+      </form>
+    </div>
   );
 }
 
-export default RepoInput;   // ✅ must be "default"
+export default RepoInput;

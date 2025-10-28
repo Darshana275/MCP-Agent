@@ -1,3 +1,31 @@
+/* ---- Page margins & centering (approx 6cm left/right) ---- */
+.analysis-page {
+  padding-left: 6cm;
+  padding-right: 6cm;
+  /* keep content centered with a max-width in case screens are huge */
+  display: flex;
+  justify-content: center;
+}
+
+.analysis-container {
+  width: 100%;
+  max-width: 1100px; /* optional cap so content doesn't become too wide */
+}
+
+/* Responsive fallback: reduce padding on smaller screens */
+@media (max-width: 1400px) {
+  .analysis-page {
+    padding-left: 3cm;
+    padding-right: 3cm;
+  }
+}
+@media (max-width: 900px) {
+  .analysis-page {
+    padding-left: 1.25rem;
+    padding-right: 1.25rem;
+  }
+}
+
 .markdown {
   background: #fafafa;
   border-radius: 8px;
@@ -27,6 +55,7 @@
 .markdown p {
   margin: 0.5em 0;
 }
+
 .explanation {
   max-height: 400px;
   overflow-y: auto;
@@ -35,6 +64,7 @@
   border-radius: 6px;
   padding: 10px;
 }
+
 .actions-list {
   display: flex;
   flex-direction: column;
@@ -81,12 +111,12 @@
   max-height: 160px;
   overflow-y: auto;
 }
+
 .section-title {
   display: flex;
   align-items: center;
   gap: 8px;
 }
-
 
 .show-more-btn {
   border: none;
@@ -99,3 +129,155 @@
 .show-more-btn:hover {
   text-decoration: underline;
 }
+
+/* ----- Dependency Risk Table (single table with OSV column) ----- */
+.risk-table-wrapper {
+  width: 100%;
+}
+
+.risk-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 8px 0 8px;
+  font-size: 0.95rem;
+  background: #fff;
+  border: 1px solid #e8e8e8;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.risk-table th,
+.risk-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #f0f0f0;
+  text-align: left;
+  vertical-align: top;
+}
+
+.risk-table thead th {
+  background: #fafafa;
+  font-weight: 600;
+}
+
+.risk-table tr:last-child td {
+  border-bottom: none;
+}
+
+/* ----- Pagination controls under table ----- */
+.table-pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  margin: 8px 0 16px;
+}
+
+.page-status {
+  font-size: 0.95rem;
+  color: #333;
+}
+
+.page-btn {
+  padding: 6px 12px;
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  background: #f7f7f7;
+  cursor: pointer;
+  font-size: 0.95rem;
+  transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.02s ease;
+}
+
+.page-btn:hover:not(:disabled) {
+  background: #efefef;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+
+.page-btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.page-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ----- OSV column presentation ----- */
+.osv-cell {
+  max-width: 520px;
+}
+
+.osv-empty {
+  color: #999;
+}
+
+.osv-line {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.osv-main {
+  display: inline-block;
+  line-height: 1.4;
+}
+
+.osv-toggle {
+  border: 1px solid #d9d9d9;
+  background: #f7f7f7;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  line-height: 1;
+  padding: 4px 8px;
+  transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.02s ease;
+}
+
+.osv-toggle:hover {
+  background: #efefef;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+
+.osv-toggle:active {
+  transform: translateY(1px);
+}
+
+.osv-list {
+  margin: 8px 0 0;
+  padding-left: 1.1rem;
+}
+
+/* ----- Basic CSS for AI buttons ----- */
+.ai-controls {
+  display: flex;
+  gap: 10px;
+  margin: 8px 0 12px;
+}
+
+.ai-controls button {
+  padding: 8px 12px;
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  background: #f7f7f7;
+  cursor: pointer;
+  font-size: 0.95rem;
+  transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.02s ease;
+}
+
+.ai-controls button:hover:not(:disabled) {
+  background: #efefef;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+
+.ai-controls button:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.ai-controls button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Optional: colorize risk levels if you already have classes like .low/.medium/.high */
+.low { color: #2e7d32; font-weight: 600; }
+.medium { color: #f57c00; font-weight: 600; }
+.high { color: #d32f2f; font-weight: 600; }
