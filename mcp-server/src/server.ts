@@ -1,3 +1,4 @@
+//mcp-server/src/server.ts
 /// <reference types="node" />
 import "dotenv/config";
 import express from "express";
@@ -5,6 +6,8 @@ import { z } from "zod";
 import { Octokit } from "octokit";
 import pLimit from "p-limit";
 import { queryOSV, inferEcosystem } from "./utils/osvLookup.js";
+import { actionsSecurityScan } from "./tools/actionsSecurity.js";
+
 
 const app = express();
 // increase payload cap; large repos may send big JSON
@@ -117,7 +120,7 @@ app.post("/tool/risk_score", async (req, res) => {
         );
       } else if (f.path.endsWith("Pipfile")) {
         const lines = f.content.split(/\r?\n/);
-        let inPackages = false;   
+        let inPackages = false;
         for (const line of lines) {
           const trimmed = line.trim();
           if (trimmed.startsWith("[packages]")) {
@@ -253,6 +256,18 @@ app.post("/tool/recommend_actions", async (req, res) => {
   } catch (err: any) {
     console.error(err);
     res.status(500).json({ error: err.message });
+  }
+});
+
+//Tool 4: actions_security
+
+app.post("/tool/actions_security_scan", async (req, res) => {
+  try {
+    const output = await actionsSecurityScan(req.body);
+    res.json({ output });
+  } catch (e: any) {
+    console.error(e);
+    res.status(500).json({ error: e.message });
   }
 });
 

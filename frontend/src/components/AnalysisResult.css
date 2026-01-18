@@ -281,3 +281,77 @@
 .low { color: #2e7d32; font-weight: 600; }
 .medium { color: #f57c00; font-weight: 600; }
 .high { color: #d32f2f; font-weight: 600; }
+
+/* CI/CD Workflow Security styles */
+.cicd-box {
+  margin-top: 10px;
+  padding: 12px;
+  border: 1px solid #e6e6e6;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.cicd-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.cicd-card {
+  border: 1px solid #eee;
+  border-radius: 10px;
+  padding: 10px;
+  background: #fafafa;
+}
+
+.cicd-top {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+
+.cicd-sev {
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.cicd-sev-high {
+  background: #ffe5e5;
+  border: 1px solid #ffb3b3;
+}
+
+.cicd-sev-medium {
+  background: #fff2d9;
+  border: 1px solid #ffd9a3;
+}
+
+.cicd-sev-low {
+  background: #e8f6ff;
+  border: 1px solid #bfe6ff;
+}
+
+.cicd-rule {
+  font-weight: 700;
+  font-size: 12px;
+  opacity: 0.85;
+}
+
+.cicd-workflow {
+  font-size: 12px;
+  opacity: 0.75;
+}
+
+.cicd-msg {
+  margin: 6px 0;
+}
+
+.cicd-rec {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px dashed #ddd;
+  font-size: 14px;
+}

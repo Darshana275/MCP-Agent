@@ -1,14 +1,42 @@
 // backend/utils/llmExplain.js
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 
-// Normal single-response generator (for fallback use)
+
+function safeStringify(obj, space = 2) {
+  const seen = new WeakSet();
+  return JSON.stringify(
+    obj,
+    (key, value) => {
+      if (typeof value === "object" && value !== null) {
+        if (seen.has(value)) return "[Circular]";
+        seen.add(value);
+      }
+      if (typeof value === "function") return `[Function ${value.name || "anonymous"}]`;
+      return value;
+    },
+    space
+  );
+}
+// Single-response generator (stable, non-streaming)
 exports.generateLLMExplanation = async (riskData, overallRisk, detail = "short") => {
   try {
-    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+    if (!process.env.GEMINI_API_KEY) {
+      throw new Error("Missing GEMINI_API_KEY");
+    }
 
+    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+
+    // Use a model that actually exists for your key
+    const model = genAI.getGenerativeModel({
+      model: "gemma-3-1b-it", // Adjust as needed
+    });
+    const jsonData = safeStringify(riskData, 2);
     const prompt = `
-Explain the dependency risk analysis in ${detail === "detailed" ? "detailed, technical" : "concise"} markdown format.
+You are a cybersecurity assistant.
+
+Explain the dependency risk analysis in ${detail === "detailed" ? "detailed, technical" : "concise"
+      } markdown format.
+
 Include:
 - Key risky dependencies (and why)
 - Safer alternatives
@@ -16,9 +44,9 @@ Include:
 - Developer recommendations
 
 JSON data:
-${JSON.stringify(riskData, null, 2)}
-
+${jsonData}
 Overall risk: ${overallRisk}
+
 Return only markdown text (no code blocks).
 `;
 
@@ -27,51 +55,5 @@ Return only markdown text (no code blocks).
   } catch (err) {
     console.error("❗ LLM generation failed:", err.message);
     return "⚠️ AI explanation unavailable.";
-  }
-};
-
-// 🧠 Streaming response generator (SSE)
-exports.streamLLMExplanation = async (res, riskData, overallRisk, detail = "short") => {
-  const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-  const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
-
-  const prompt = `
-You are a cybersecurity AI assistant.
-Explain the dependency risk analysis in ${detail === "detailed" ? "detailed, technical" : "concise"} markdown format.
-Include:
-- Key risky dependencies (and why)
-- Safer alternatives
-- Project security summary
-- Developer recommendations
-
-JSON data:
-${JSON.stringify(riskData, null, 2)}
-
-Overall risk: ${overallRisk}
-Return only markdown text (no code blocks).
-`;
-
-  // Set headers for SSE
-  res.writeHead(200, {
-    "Content-Type": "text/event-stream",
-    "Cache-Control": "no-cache",
-    Connection: "keep-alive",
-  });
-
-  try {
-    const stream = await model.generateContentStream(prompt);
-
-    for await (const chunk of stream.stream) {
-      const text = chunk.text();
-      if (text) res.write(`data: ${text}\n\n`);
-    }
-
-    res.write("data: [END]\n\n");
-    res.end();
-  } catch (err) {
-    console.error("❗ Stream error:", err.message);
-    res.write(`data: ⚠️ Streaming failed: ${err.message}\n\n`);
-    res.write("data: [END]\n\n");
-    res.end();
   }
 };

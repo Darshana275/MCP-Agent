@@ -2,12 +2,21 @@ import React, { useState } from "react";
 import RepoInput from "./components/RepoInput";
 import AnalysisResult from "./components/AnalysisResult";
 import Spinner from "./components/Spinner";
+import WebhookMonitor from "./components/WebhookMonitor"; // ✅ NEW
 import "./App.css";
 
 function App() {
+  const [mode, setMode] = useState("manual"); // manual | webhook
+
   const [analysisData, setAnalysisData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [spinnerText, setSpinnerText] = useState("🔍 Starting analysis...");
+
+  const toggleMode = () => {
+    setMode((m) => (m === "manual" ? "webhook" : "manual"));
+    // optional: keep previous analysis data, or reset it
+    // setAnalysisData(null);
+  };
 
   const handleAnalysis = async (repoUrl) => {
     try {
@@ -27,7 +36,6 @@ function App() {
 
       if (data.success) {
         setSpinnerText("🧠 Generating AI risk explanation...");
-        // short delay to make transition smoother
         await new Promise((resolve) => setTimeout(resolve, 500));
         setAnalysisData(data);
       } else {
@@ -43,13 +51,29 @@ function App() {
 
   return (
     <div className="App">
-      <h1 style={{ textAlign: 'center', marginTop: '20px' }}>🔍 GitHub Risk Analyzer</h1>
-      <RepoInput onAnalyze={handleAnalysis} />
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 20 }}>
+        <h1 style={{ textAlign: "center", margin: 0, flex: 1 }}>🔍 GitHub Risk Analyzer</h1>
 
-      {loading && <Spinner text={spinnerText} />}
+        <button
+          onClick={toggleMode}
+          style={{ marginLeft: 12, padding: "8px 12px", cursor: "pointer" }}
+        >
+          {mode === "manual" ? "🔔 Webhook Mode" : "🔎 Manual Scan"}
+        </button>
+      </div>
 
-      {!loading && analysisData && analysisData.success && (
-        <AnalysisResult data={analysisData} />
+      {mode === "manual" ? (
+        <>
+          <RepoInput onAnalyze={handleAnalysis} />
+
+          {loading && <Spinner text={spinnerText} />}
+
+          {!loading && analysisData && analysisData.success && (
+            <AnalysisResult data={analysisData} />
+          )}
+        </>
+      ) : (
+        <WebhookMonitor />
       )}
     </div>
   );

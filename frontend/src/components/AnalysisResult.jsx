@@ -17,7 +17,7 @@ const AnalysisResult = ({ data }) => {
 
   if (!data) return null;
 
-  const { repoUrl, riskAnalysis, overallRisk, recommendedActions } = data;
+  const { repoUrl, riskAnalysis, overallRisk, recommendedActions, cicdFindings } = data;
 
   const totalPages = Math.max(1, Math.ceil((riskAnalysis?.length || 0) / rowsPerPage));
   const startIndex = currentPage * rowsPerPage;
@@ -41,37 +41,47 @@ const AnalysisResult = ({ data }) => {
   };
 
   const fetchAI = async (detail = "short") => {
-    setAiText(""); // reset previous text
-    setLoading(true);
+    try {
+      setAiText("");
+      setLoading(true);
 
-    const url = `http://localhost:4000/api/ai-explain/stream?repoUrl=${encodeURIComponent(
-      repoUrl
-    )}&detail=${detail}`;
+      const url = `http://localhost:4000/api/ai-explain?repoUrl=${encodeURIComponent(
+        repoUrl
+      )}&detail=${detail}`;
 
-    const eventSource = new EventSource(url);
+      const resp = await fetch(url);
+      const json = await resp.json();
 
-    eventSource.onmessage = (event) => {
-      if (event.data === "[END]") {
-        eventSource.close();
-        setLoading(false);
-        return;
+      if (!resp.ok) {
+        throw new Error(json?.error || "Failed to fetch AI explanation");
       }
-      setAiText((prev) => prev + event.data);
-    };
 
-    eventSource.onerror = (err) => {
-      console.error("Stream error:", err);
+      setAiText(json.explanation || "");
+    } catch (err) {
+      console.error("AI fetch error:", err);
+      setAiText(`⚠️ Failed to load AI explanation: ${err.message}`);
+    } finally {
       setLoading(false);
-      eventSource.close();
-    };
+    }
   };
 
-  // helper to render severity if number/array/string
   const renderSeverity = (sev) => {
     if (typeof sev === "number") return String(sev);
     if (Array.isArray(sev)) return sev.join(", ");
     return sev || "—";
   };
+
+  // ---- CI/CD helpers ----
+  const normalizeSeverity = (s) => String(s || "LOW").toUpperCase();
+  const severityClass = (s) => {
+    const sev = normalizeSeverity(s);
+    if (sev === "CRITICAL" || sev === "HIGH") return "cicd-sev-high";
+    if (sev === "MEDIUM") return "cicd-sev-medium";
+    return "cicd-sev-low";
+  };
+
+  const cicdRows = cicdFindings?.findings || [];
+  const cicdScanned = cicdFindings?.workflowsScanned ?? 0;
 
   return (
     <div className="analysis-page">
@@ -135,13 +145,9 @@ const AnalysisResult = ({ data }) => {
                                 type="button"
                                 className={`osv-toggle ${isOpen ? "open" : ""}`}
                                 aria-expanded={isOpen}
-                                onClick={() =>
-                                  setOpenOSVKey(isOpen ? null : rowKey)
-                                }
+                                onClick={() => setOpenOSVKey(isOpen ? null : rowKey)}
                                 title={
-                                  isOpen
-                                    ? "Hide other OSV entries"
-                                    : "Show other OSV entries"
+                                  isOpen ? "Hide other OSV entries" : "Show other OSV entries"
                                 }
                               >
                                 {isOpen ? "▴" : "▾"}
@@ -244,9 +250,7 @@ const AnalysisResult = ({ data }) => {
                 </div>
 
                 <div className="action-body">
-                  <pre className="action-text">
-                    {isExpanded ? a.message : shortMessage}
-                  </pre>
+                  <pre className="action-text">{isExpanded ? a.message : shortMessage}</pre>
                   {a.message.length > 300 && (
                     <button
                       onClick={() => setExpandedIndex(isExpanded ? null : i)}
@@ -261,6 +265,42 @@ const AnalysisResult = ({ data }) => {
           })}
         </div>
 
+        {/* ✅ CI/CD Workflow Security */}
+        <h3 className="section-title">🛠 CI/CD Workflow Security</h3>
+
+        <div className="cicd-box">
+          <p style={{ marginTop: 0 }}>
+            <strong>Workflows scanned:</strong> {cicdScanned}
+          </p>
+
+          {cicdRows.length === 0 ? (
+            <p>✅ No risky GitHub Actions workflow patterns detected.</p>
+          ) : (
+            <div className="cicd-list">
+              {cicdRows.map((f, idx) => (
+                <div key={idx} className="cicd-card">
+                  <div className="cicd-top">
+                    <span className={`cicd-sev ${severityClass(f.severity)}`}>
+                      {normalizeSeverity(f.severity)}
+                    </span>
+                    <span className="cicd-rule">{f.ruleId || "RULE"}</span>
+                    <span className="cicd-workflow">{f.workflow || "(workflow)"}</span>
+                  </div>
+
+                  <div className="cicd-msg">{f.message}</div>
+
+                  {f.recommendation && (
+                    <div className="cicd-rec">
+                      <strong>Fix:</strong> {f.recommendation}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* AI Explanation */}
         <h3 className="section-title">🧠 AI Explanation</h3>
         <div className="ai-controls">
           <button onClick={() => fetchAI("short")} disabled={loading}>

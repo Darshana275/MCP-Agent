@@ -1,8 +1,7 @@
 // backend/controllers/analyzerController.js
 const axios = require("axios");
-const { getLLMExplanation } = require("../utils/llmExplain");
+const { generateLLMExplanation } = require("../utils/llmExplain");
 
-// In-memory cache for scan results (to use when fetching explanations)
 const scanCache = new Map();
 
 exports.analyzePackage = async (req, res) => {
@@ -11,25 +10,46 @@ exports.analyzePackage = async (req, res) => {
     if (!repoUrl)
       return res.status(400).json({ error: 'Expected "repoUrl" in request body.' });
 
-    // Step 1️⃣ – GitHub scan
+    // Step 1 – GitHub scan
     const scan = await axios.post("http://localhost:8000/tool/github_scan", { repoUrl });
     const { deps, findings } = scan.data.output;
 
-    // Step 2️⃣ – Risk scoring
+    // Step 2 – Risk scoring
     const score = await axios.post("http://localhost:8000/tool/risk_score", { deps });
     const { scores, overall } = score.data.output;
 
-    // Step 3️⃣ – Governance actions
+    // Step 3 – Governance actions
     const rec = await axios.post("http://localhost:8000/tool/recommend_actions", {
       overall,
       findings,
     });
     const { actions } = rec.data.output;
 
-    // Store analysis data for LLM use
+    // ✅ Step 4 – CI/CD workflow security scan (new)
+    let cicdFindings = { workflowsScanned: 0, findings: [] };
+    try {
+      const wf = await axios.post("http://localhost:8000/tool/actions_security_scan", { repoUrl });
+      cicdFindings = wf.data.output; // { workflowsScanned, findings }
+    } catch (e) {
+      // don't fail the whole analysis if CI/CD tool fails
+      cicdFindings = {
+        workflowsScanned: 0,
+        findings: [
+          {
+            severity: "LOW",
+            ruleId: "ACTIONS_SCAN_UNAVAILABLE",
+            workflow: "(system)",
+            message: "CI/CD workflow security scan unavailable.",
+            recommendation: "Check mcp-server tool /tool/actions_security_scan is running.",
+          },
+        ],
+      };
+    }
+
+    // cache for AI endpoint
     scanCache.set(repoUrl, { scores, overall });
 
-    // Return main response immediately
+    // ✅ respond once
     res.json({
       success: true,
       repoUrl,
@@ -37,21 +57,22 @@ exports.analyzePackage = async (req, res) => {
       riskAnalysis: scores,
       overallRisk: overall,
       recommendedActions: actions,
-      llmExplanation: null, // placeholder (AI loads async)
+      cicdFindings, // ✅ NEW FIELD
+      llmExplanation: null,
     });
 
-    // Background LLM generation (async)
-    getLLMExplanation(repoUrl, scores, overall).then((text) => {
-      scanCache.set(repoUrl, { ...scanCache.get(repoUrl), shortAI: text });
+    // background LLM generation (optional)
+    generateLLMExplanation(scores, overall, "short").then((text) => {
+      const prev = scanCache.get(repoUrl) || {};
+      scanCache.set(repoUrl, { ...prev, shortAI: text });
       console.log(`🧠 Cached LLM summary for ${repoUrl}`);
     });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: err.message });
   }
 };
 
-// 🔁 Endpoint to fetch or refresh AI explanation
 exports.getAIExplanation = async (req, res) => {
   try {
     const { repoUrl, detail } = req.query;
@@ -60,12 +81,17 @@ exports.getAIExplanation = async (req, res) => {
     const analysis = scanCache.get(repoUrl);
     if (!analysis) return res.status(404).json({ error: "No previous scan found" });
 
-    const text = await getLLMExplanation(repoUrl, analysis.scores, analysis.overall, detail || "short");
-    res.json({ explanation: text });
+    const text = await generateLLMExplanation(
+      analysis.scores,
+      analysis.overall,
+      detail || "short"
+    );
+
+    return res.json({ explanation: text });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: err.message });
   }
 };
-// expose cached scans for streaming
+
 exports.getCachedScan = () => scanCache;
